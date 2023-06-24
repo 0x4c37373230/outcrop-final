@@ -1,0 +1,10 @@
+[package]
+name = "outcrop-final"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+native-windows-gui = "1.0.12"
+native-windows-derive = "1.0.3"
