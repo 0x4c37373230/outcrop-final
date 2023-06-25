@@ -1,0 +1,63 @@
+// SEE 'build.rs.txt' COMMENTS
+
+#include <Windows.h>
+#include <cstring>
+
+inline void closeAndFree(HANDLE procH, bool couldWrite, HANDLE rThreadH, LPVOID dllPathAddr, const char* dllPath)
+{
+    if (procH)
+    {
+        if (couldWrite)
+            VirtualFreeEx(procH,
+                          dllPathAddr,std::strlen(dllPath),MEM_RELEASE);
+        CloseHandle(procH);
+    }
+
+    if (rThreadH)
+        CloseHandle(rThreadH);
+}
+
+extern "C" bool injectDll(int process_id, const char* dll_path) {
+    HANDLE hHandle{ OpenProcess(PROCESS_ALL_ACCESS,false,process_id) };
+
+    if (hHandle)
+    {
+        LPVOID dllPathAddr{ VirtualAllocEx(hHandle,
+                                           NULL,
+                                           std::strlen(dll_path),
+                                           MEM_COMMIT | MEM_RESERVE,PAGE_READWRITE) };
+
+        if (dllPathAddr)
+            WriteProcessMemory(hHandle,
+                               dllPathAddr,
+                               dll_path,
+                               std::strlen(dll_path),NULL);
+        else
+        {
+            closeAndFree(hHandle, false, NULL, NULL, NULL);
+            return false;
+        }
+
+        LPVOID LLAAddr{ (LPVOID)GetProcAddress(GetModuleHandle("kernel32.dll"),
+                                               "LoadLibraryA") };
+        HANDLE remoteThread{ CreateRemoteThread(hHandle,
+                                                NULL,
+                                                NULL,
+                                                (LPTHREAD_START_ROUTINE)LLAAddr,
+                                                dllPathAddr, 0, NULL) };
+
+        if (remoteThread)
+            WaitForSingleObject(remoteThread, INFINITE);
+        else
+        {
+            closeAndFree(hHandle, true, NULL, dllPathAddr, dll_path);
+            return false;
+        }
+
+        closeAndFree(hHandle, true, remoteThread, dllPathAddr, dll_path);
+    }
+    else
+        return false;
+
+    return true;
+}

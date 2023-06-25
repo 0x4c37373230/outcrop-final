@@ -4,11 +4,12 @@ extern crate native_windows_derive as nwd;
 extern crate native_windows_gui as nwg;
 
 mod class_reconstruction;
+mod injection;
 
 use crate::class_reconstruction::be_class::BEClass;
 use crate::class_reconstruction::input_file::{loop_through_file, InputFile};
-use std::fs::File;
-use std::io::Write;
+use crate::injection::mod_loading::inject_mod;
+use std::{fs::File, io::Write};
 use {nwd::NwgUi, nwg::NativeUi};
 
 #[derive(Default, NwgUi)]
@@ -58,19 +59,13 @@ pub struct Outcrop {
     //    #[nwg_events( OnButtonClick: [] )]
     d_filtered_dump: nwg::Button,
 
-    #[nwg_control(text: "Input DLL path to inject", size: (235, 25), position: (250, 80))]
+    #[nwg_control(text: "Input DLL absolute path to inject", size: (235, 25), position: (250, 80))]
     i_label1: nwg::Label,
     #[nwg_control(text: "", size: (235, 25), position: (250, 100))]
     i_dll_path: nwg::TextInput,
 
-    #[nwg_control(text: "See DLL list", size: (235, 25), position: (250, 130))]
-    i_label2: nwg::Label,
-    #[nwg_control(text: "Available mods", size: (235, 25), position: (250, 150))]
-    //    #[nwg_events( OnButtonClick: [] )]
-    i_mod_list: nwg::Button,
-
     #[nwg_control(text: "Inject", size: (235, 30), position: (250, 180))]
-    //    #[nwg_events( OnButtonClick: [] )]
+    #[nwg_events( OnButtonClick: [Outcrop::inject] )]
     i_inject: nwg::Button,
 
     #[nwg_control(text: "------------------------------------------------------------------\
@@ -96,6 +91,15 @@ pub struct Outcrop {
 }
 
 impl Outcrop {
+    fn inject(&self) {
+        let dll_abs_path = String::from(&self.i_dll_path.text());
+
+        match inject_mod(&dll_abs_path) {
+            Ok(()) => msg_builder(true, "Successfully injected DLL"),
+            Err(err) => msg_builder(false, &err.to_string()),
+        };
+    }
+
     fn reconstruct_class(&self) {
         match File::open(&self.cr_class_file_path.text()) {
             Ok(file) => {
@@ -105,17 +109,17 @@ impl Outcrop {
                 loop_through_file(&file, &mut file_structure, &mut out_class);
 
                 match out_class.setup(&file_structure) {
-                    Ok(_) => {
-                        match File::create("./class.hpp") {
-                            Ok(mut out_file) => {
-                                match out_file.write_all(format!("{}}};", out_class).as_ref()) {
-                                    Ok(_) => msg_builder(true, "Successfully reconstructed class from file"),
-                                    Err(_) => msg_builder(false, "Could not write to file")
+                    Ok(_) => match File::create("./class.hpp") {
+                        Ok(mut out_file) => {
+                            match out_file.write_all(format!("{}}};", out_class).as_ref()) {
+                                Ok(_) => {
+                                    msg_builder(true, "Successfully reconstructed class from file")
                                 }
+                                Err(_) => msg_builder(false, "Could not write to file"),
                             }
-                            Err(_) => msg_builder(false, "Could not create file")
                         }
-                    }
+                        Err(_) => msg_builder(false, "Could not create file"),
+                    },
                     Err(_) => msg_builder(false, "Incorrect, incomplete, or invalid file format"),
                 }
             }
@@ -139,6 +143,6 @@ fn main() {
 fn msg_builder(code: bool, content: &str) {
     match code {
         true => nwg::simple_message("SUCCESS!", content),
-        false => nwg::simple_message("ERROR", content)
+        false => nwg::simple_message("ERROR", content),
     };
 }

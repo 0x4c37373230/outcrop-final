@@ -1,0 +1,32 @@
+// SEE 'build.rs.txt' COMMENTS
+
+#include <Windows.h>
+#include <TlHelp32.h>
+
+extern "C" unsigned int getProcId() {
+    const wchar_t* procName = (const wchar_t *)"bedrock_server.exe";
+    unsigned int procId{ 0 };
+    const HANDLE snapHandle{ CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0) };
+
+    if (snapHandle != INVALID_HANDLE_VALUE)
+    {
+        PROCESSENTRY32 procEntry;
+        procEntry.dwSize = sizeof(procEntry);
+
+        if (Process32First(snapHandle, &procEntry))
+        {
+            do
+            {
+                if (!_wcsicmp((const wchar_t*)procEntry.szExeFile, procName))
+                {
+                    procId = procEntry.th32ProcessID;
+                    break;
+                }
+            } while (Process32Next(snapHandle, &procEntry));
+        }
+    }
+
+    CloseHandle(snapHandle);
+
+    return procId;
+}

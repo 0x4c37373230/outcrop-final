@@ -8,3 +8,9 @@ edition = "2021"
 [dependencies]
 native-windows-gui = "1.0.12"
 native-windows-derive = "1.0.3"
+subprocess = "0.2.9"
+injrs = "0.1.2"
+
+# Will not use C++ code until I get it working properly
+# [build-dependencies]
+# cc = "1.0"

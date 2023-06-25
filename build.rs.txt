@@ -1,0 +1,7 @@
+fn main() {
+    cc::Build::new()
+        .cpp(true)
+//        .file("src/injection/injectDll.cpp")
+        .file("src/injection/getProcId.cpp")
+        .compile("injectionHelper.a");
+}
