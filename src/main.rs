@@ -4,10 +4,13 @@ extern crate native_windows_derive as nwd;
 extern crate native_windows_gui as nwg;
 
 mod class_reconstruction;
+mod files;
 mod injection;
 
 use crate::class_reconstruction::be_class::BEClass;
 use crate::class_reconstruction::input_file::{loop_through_file, InputFile};
+use crate::files::path_exists;
+use crate::injection::checks::loader_files;
 use crate::injection::mod_loading::inject_mod;
 use std::{fs::File, io::Write};
 use {nwd::NwgUi, nwg::NativeUi};
@@ -59,10 +62,16 @@ pub struct Outcrop {
     //    #[nwg_events( OnButtonClick: [] )]
     d_filtered_dump: nwg::Button,
 
-    #[nwg_control(text: "Input DLL absolute path to inject", size: (235, 25), position: (250, 80))]
+    #[nwg_control(text: "Input DLL path to inject", size: (235, 25), position: (250, 80))]
     i_label1: nwg::Label,
     #[nwg_control(text: "", size: (235, 25), position: (250, 100))]
     i_dll_path: nwg::TextInput,
+
+    #[nwg_control(text: "See DLL list", size: (235, 25), position: (250, 130))]
+    i_label2: nwg::Label,
+    #[nwg_control(text: "Available mods", size: (235, 25), position: (250, 150))]
+    #[nwg_events( OnButtonClick: [Outcrop::list_mods] )]
+    i_mod_list: nwg::Button,
 
     #[nwg_control(text: "Inject", size: (235, 30), position: (250, 180))]
     #[nwg_events( OnButtonClick: [Outcrop::inject] )]
@@ -92,16 +101,35 @@ pub struct Outcrop {
 
 impl Outcrop {
     fn inject(&self) {
-        let dll_abs_path = String::from(&self.i_dll_path.text());
+        let dll_path = String::from(&self.i_dll_path.text());
 
-        match inject_mod(&dll_abs_path) {
-            Ok(()) => msg_builder(true, "Successfully injected DLL"),
-            Err(err) => msg_builder(false, &err.to_string()),
+        if loader_files(&dll_path) {
+            inject_mod(&dll_path);
+        } else {
+            msg_builder(false, "Could not find a file. Check whether all the files required for injection do in fact exist");
+        }
+    }
+
+    fn list_mods(&self) {
+        let dll_list = injection::checks::dll_map();
+        let mut dlls: String = String::from("");
+
+        match dll_list {
+            Ok(dll_list) => {
+                for (key, dll) in &dll_list {
+                    dlls.push_str(&format!("{}: {}\n", key, dll));
+                }
+
+                msg_builder(true, &format!("{}", dlls));
+            }
+            Err(_) => msg_builder(false, "Could not find 'plugins' folder"),
         };
     }
 
     fn reconstruct_class(&self) {
-        match File::open(&self.cr_class_file_path.text()) {
+        let class_template_path = self.cr_class_file_path.text();
+
+        match File::open(&class_template_path) {
             Ok(file) => {
                 let mut file_structure = InputFile::new();
                 let mut out_class = BEClass::new();
@@ -123,7 +151,13 @@ impl Outcrop {
                     Err(_) => msg_builder(false, "Incorrect, incomplete, or invalid file format"),
                 }
             }
-            Err(_) => msg_builder(false, "Could not find class text file"),
+            Err(_) => {
+                if path_exists(&class_template_path) {
+                    msg_builder(false, "Could not open class file")
+                } else {
+                    msg_builder(false, "Class file does not exist")
+                }
+            }
         };
     }
 
@@ -141,8 +175,9 @@ fn main() {
 }
 
 fn msg_builder(code: bool, content: &str) {
-    match code {
-        true => nwg::simple_message("SUCCESS!", content),
-        false => nwg::simple_message("ERROR", content),
-    };
+    if code {
+        nwg::simple_message("SUCCESS!", content);
+    } else {
+        nwg::simple_message("ERROR", content);
+    }
 }

@@ -1,2 +1,2 @@
-pub mod bds;
+pub mod checks;
 pub mod mod_loading;

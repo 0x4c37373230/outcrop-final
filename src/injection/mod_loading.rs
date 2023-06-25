@@ -1,7 +1,8 @@
-use crate::injection::bds;
+use crate::msg_builder;
 use injrs::inject_windows::InjectorExt;
 use injrs::process_windows::Process;
-use std::{io, thread, time};
+use std::{thread, time};
+use subprocess::Exec;
 
 // This injection function does not seem to be working
 /*
@@ -11,12 +12,22 @@ extern "C" {
 }
 */
 
-pub fn inject_mod(dll_abs_path: &str) -> Result<(), io::Error> {
-    bds::bds_thread();
+pub fn inject_mod(dll_path: &str) {
+    thread::spawn(|| match Exec::shell("bedrock_server.exe").join() {
+        Err(err) => {
+            msg_builder(false, &err.to_string());
+            return
+        }
+        _ => {}
+    });
+
     thread::sleep(time::Duration::from_millis(5000));
 
     // TODO: Change the temporary use of injrs to my own DLL injector code
     let bds_process = Process::find_first_by_name("bedrock_server.exe").unwrap();
 
-    return bds_process.inject(dll_abs_path);
+    match bds_process.inject(dll_path) {
+        Ok(_) => msg_builder(true, "Successfully injected DLL"),
+        Err(err) => msg_builder(false, &err.to_string())
+    }
 }
