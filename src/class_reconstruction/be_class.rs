@@ -2,8 +2,8 @@ use crate::class_reconstruction::{
     data_parsing::{cast_type, name_for_method, ClassInfo, FunctionType},
     input_file::InputFile,
 };
-use std::fmt;
 
+/// Contains or will contain the C++ file format of the class being reconstructed
 pub struct BEClass {
     pub beginning: String, // first line of the class, containing name and keywords
     pub members: String,   // contains declarations of class members
@@ -12,13 +12,14 @@ pub struct BEClass {
     pub data: ClassInfo, // contains two vectors of data, the first has member names,
 } // the second has offsets
 
-impl fmt::Display for BEClass {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl std::fmt::Display for BEClass {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}{}{}", self.beginning, self.getters, self.setters)
     }
 }
 
 impl BEClass {
+    /// Constructor for BEClass
     pub fn new() -> Self {
         Self {
             beginning: "".to_string(),
@@ -32,7 +33,8 @@ impl BEClass {
         }
     }
 
-    /// Generates the output class body using previously parsed data
+    /// Generates the output class body using previously parsed data and stores it in BEClass
+    /// members
     ///
     /// # Arguments
     ///
@@ -61,13 +63,15 @@ impl BEClass {
         }
     }
 
-    /// Generates a list of getters and setters without the need for member variables using only reinterpret casts and the class `this` pointer
+    /// Generates a list of getters and setters without the need for member variables using only
+    /// reinterpret casts and the class `this` pointer
     ///
     /// # Arguments
     ///
     /// * `fields`: contains the member variable names and types
     /// * `fn_type`: determines whether to generate getters or setters
     fn generate_methods(&mut self, fields: &Vec<Vec<&str>>, fn_type: FunctionType) {
+        // TODO: Proper commenting and documentation (explain this code past-Luke!)
         let mut index: usize = 0;
 
         for str_vec in fields {

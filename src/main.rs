@@ -7,19 +7,20 @@ mod class_reconstruction;
 mod files;
 mod injection;
 
-use crate::class_reconstruction::be_class::BEClass;
-use crate::class_reconstruction::input_file::{loop_through_file, InputFile};
-use crate::files::path_exists;
-use crate::injection::checks::loader_files;
-use crate::injection::mod_loading::inject_mod;
+use class_reconstruction::{
+    be_class::BEClass,
+    input_file::{loop_through_file, InputFile},
+};
+use files::path_exists;
+use injection::{checks::loader_files, mod_loading::inject_mod};
+use nwg::NativeUi;
 use std::{fs::File, io::Write};
-use {nwd::NwgUi, nwg::NativeUi};
 
-#[derive(Default, NwgUi)]
-/// This struct contains the UI layout. The component prefixes indicate which tool something
+/// Contains the UI layout. The component prefixes indicate which tool something
 /// belongs to. the 'd' prefix indicates something corresponds to the PDB dumper. The 'i'
 /// prefix indicates something corresponds to the DLL injector, and the 'cr' prefix indicates
 /// something corresponds to the IDA class reconstructor
+#[derive(Default, nwd::NwgUi)]
 pub struct Outcrop {
     #[nwg_control(size: (500, 600), position: (300, 300), title: "OUTCROP", flags: "WINDOW|VISIBLE")]
     #[nwg_events( OnWindowClose: [Outcrop::exit_program] )]
@@ -101,8 +102,10 @@ pub struct Outcrop {
 
 impl Outcrop {
     fn inject(&self) {
+        // get the DLL path from user input
         let dll_path = String::from(&self.i_dll_path.text());
 
+        // if the DLL, plugins folder, and BDS executable are found, then inject the DLL
         if loader_files(&dll_path) {
             inject_mod(&dll_path);
         } else {
@@ -110,12 +113,14 @@ impl Outcrop {
         }
     }
 
+    // NOT USABLE (YET) UNLESS OUTCROP IS INSIDE THE BDS FOLDER
     fn list_mods(&self) {
-        let dll_list = injection::checks::dll_map();
-        let mut dlls: String = String::from("");
-
-        match dll_list {
+        // get DLL ordered list from plugins folder (if it exists)
+        match injection::checks::dll_map() {
             Ok(dll_list) => {
+                let mut dlls: String = String::from("");
+                // loop through the ordered DLL list and add a line to the string that will be
+                // displayed, containing the number assigned to the DLL and it's name
                 for (key, dll) in &dll_list {
                     dlls.push_str(&format!("{}: {}\n", key, dll));
                 }
@@ -127,16 +132,23 @@ impl Outcrop {
     }
 
     fn reconstruct_class(&self) {
+        // get location of 'class.txt' from user input
         let class_template_path = self.cr_class_file_path.text();
 
         match File::open(&class_template_path) {
+            // if said file can be opened...
             Ok(file) => {
                 let mut file_structure = InputFile::new();
                 let mut out_class = BEClass::new();
 
+                // ...loop through it, process the sections, get preliminary class information, and
+                // store everything in the variables declared above
                 loop_through_file(&file, &mut file_structure, &mut out_class);
 
+                // attempt to generate C++ class body and members
                 match out_class.setup(&file_structure) {
+                    // if this succeeds, attempt to create a C++ header file to contain the output
+                    // code and attempt to write the class code to it
                     Ok(_) => match File::create("./class.hpp") {
                         Ok(mut out_file) => {
                             match out_file.write_all(format!("{}}};", out_class).as_ref()) {
@@ -174,10 +186,16 @@ fn main() {
     nwg::dispatch_thread_events();
 }
 
+/// Displays a windows message box with either the output or an error
+///
+/// # Arguments
+///
+/// * `code`: a boolean. true determines a success while false determines an error
+/// * `content`: this text to be be displayed on the message box
 fn msg_builder(code: bool, content: &str) {
     if code {
         nwg::simple_message("SUCCESS!", content);
     } else {
-        nwg::simple_message("ERROR", content);
+        nwg::error_message("ERROR", content);
     }
 }

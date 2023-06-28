@@ -35,8 +35,8 @@ pub fn name_for_method(name: &str) -> &str {
     };
 }
 
-/// If the getter return type is a pointer to something, the reinterpret cast shouldn't be
-/// dereferenced. If it isn't, it should
+/// Determines whether the reinterpret_cast should or shouldn't be dereferenced based on whether the
+/// return type is or is not a pointer
 ///
 /// # Arguments
 ///

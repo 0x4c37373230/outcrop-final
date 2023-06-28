@@ -4,10 +4,10 @@ use std::{
     io::{BufRead, BufReader},
 };
 
-// holds the basic structure of the input file (class.txt). class.txt contains 3 sections with
-// their respective delimiters. the declaration section holds the class declaration  and its
-// members. the memory section contains the memory layout of the class, and the end marks, well,
-// the end of the file
+/// Holds the basic structure of the input file (class.txt). class.txt contains 3 sections with
+/// their respective delimiters. The declaration section holds the class declaration  and its
+/// members. The memory section contains the memory layout of the class, and the end marks, well,
+/// the end of the file
 pub struct InputFile {
     pub dec_n: usize, // declaration delimiter line number
     pub mem_n: usize, // memory layout delimiter line number
