@@ -30,7 +30,7 @@ pub fn inject_mod(dll_path: &str) {
 
     // TODO: Change the temporary use of injrs to my own DLL injector code
     // try to find the BDS process
-    match Process::find_first_by_name("bedrock_server.exe"){
+    match Process::find_first_by_name("bedrock_server.exe") {
         Some(bds_process) => {
             // if found, attempt to inject the desired DLL
             match bds_process.inject(dll_path) {
@@ -38,6 +38,6 @@ pub fn inject_mod(dll_path: &str) {
                 Err(err) => msg_builder(false, &err.to_string()),
             }
         }
-        None => msg_builder(false, &err.to_string()),
+        None => msg_builder(false, "Unable to find BDS process"),
     };
 }

@@ -6,14 +6,17 @@ extern crate native_windows_gui as nwg;
 mod class_reconstruction;
 mod files;
 mod injection;
+mod pdb_dumping;
 
+use crate::pdb_dumping::setup;
 use class_reconstruction::{
     be_class::BEClass,
     input_file::{loop_through_file, InputFile},
 };
 use files::path_exists;
 use injection::{checks::loader_files, mod_loading::inject_mod};
-use nwg::NativeUi;
+use nwg::{CheckBoxState, NativeUi};
+use pdb_dumping::pdb;
 use std::{fs::File, io::Write};
 
 /// Contains the UI layout. The component prefixes indicate which tool something
@@ -52,15 +55,15 @@ pub struct Outcrop {
     d_should_demangle: nwg::CheckBox,
 
     #[nwg_control(text: "Find Function", size: (235, 30), position: (250, 240))]
-    //    #[nwg_events( OnButtonClick: [] )]
+    #[nwg_events( OnButtonClick: [Outcrop::find] )]
     d_find_function: nwg::Button,
 
     #[nwg_control(text: "Dump Data", size: (235, 30), position: (10, 275))]
-    //    #[nwg_events( OnButtonClick: [] )]
+    #[nwg_events( OnButtonClick: [Outcrop::dump] )]
     d_dump_data: nwg::Button,
 
     #[nwg_control(text: "Filtered Dump", size: (235, 30), position: (250, 275))]
-    //    #[nwg_events( OnButtonClick: [] )]
+    #[nwg_events( OnButtonClick: [Outcrop::filtered_dump] )]
     d_filtered_dump: nwg::Button,
 
     #[nwg_control(text: "Input DLL path to inject", size: (235, 25), position: (250, 80))]
@@ -101,6 +104,55 @@ pub struct Outcrop {
 }
 
 impl Outcrop {
+    fn dump(&self) {
+        let pdb_path: &str = &self.d_pdb_path.text();
+        let file_type: &str = &self.d_dump_file_type.text();
+        let demangle = if &self.d_should_demangle.check_state() == &CheckBoxState::Checked {
+            true
+        } else {
+            false
+        };
+
+        match setup::dump_init(pdb_path, file_type) {
+            Ok(dump_file) => pdb::pdb_dump(pdb_path, file_type, dump_file, demangle)
+                .expect("ERROR: Failed to dump pdb contents"),
+            Err(msg) => {
+                nwg::simple_message("Error", &msg);
+                return;
+            }
+        }
+    }
+
+    fn find(&self) {
+        match pdb::find_function(&self.d_pdb_path.text(), &self.d_func_name.text()) {
+            Ok(bds_func) => nwg::simple_message(
+                "Found a match",
+                &format!(
+                    "Function name: {}\nSymbol: {}\nRVA: {}",
+                    bds_func.name, bds_func.symbol, bds_func.rva
+                ),
+            ),
+            Err(str) => nwg::simple_message("Error", &str),
+        };
+    }
+
+    fn filtered_dump(&self) {
+        let pdb_path: &str = &self.d_pdb_path.text();
+        let file_type: &str = &self.d_dump_file_type.text();
+
+        match setup::dump_init(pdb_path, file_type) {
+            Ok(dump_file) => match pdb::find_functions(pdb_path, file_type, dump_file) {
+                Err(msg) => {
+                    nwg::simple_message("Error", &msg);
+                }
+                _ => {}
+            },
+            Err(msg) => {
+                nwg::simple_message("Error", &msg);
+            }
+        }
+    }
+
     fn inject(&self) {
         // get the DLL path from user input
         let dll_path = String::from(&self.i_dll_path.text());
@@ -180,6 +232,7 @@ impl Outcrop {
 
 fn main() {
     nwg::init().expect("Failed to init Native Windows GUI");
+    setup::filter_manager();
 
     let _app = Outcrop::build_ui(Default::default()).expect("Failed to build UI");
 
