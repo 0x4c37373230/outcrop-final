@@ -21,12 +21,6 @@ impl BDSFunction {
     /// * `rva`: Relative virtual address of the symbol
     ///
     /// returns: BDSFunction
-    ///
-    /// # Examples
-    ///
-    /// ```
-    ///
-    /// ```
     fn create_instance(name: String, symbol: String, rva: Rva) -> BDSFunction {
         return BDSFunction { name, symbol, rva };
     }
@@ -43,12 +37,6 @@ impl BDSFunction {
 /// performance)
 ///
 /// returns: Result<(), Error>
-///
-/// # Examples
-///
-/// ```
-///
-/// ```
 pub fn pdb_dump(
     pdb_path: &str,
     file_type: &str,
@@ -126,12 +114,6 @@ pub fn pdb_dump(
 /// * `function_name`: Function name to find formatted as [Class Name]::[Function]
 ///
 /// returns: Result<BDSFunction, String>
-///
-/// # Examples
-///
-/// ```
-///
-/// ```
 pub fn find_function(pdb_path: &str, function_name: &str) -> Result<BDSFunction, String> {
     match File::open(&pdb_path) {
         Ok(file_path) => {
@@ -179,12 +161,6 @@ pub fn find_function(pdb_path: &str, function_name: &str) -> Result<BDSFunction,
 /// * `dump_file`: Output file handle
 ///
 /// returns: Result<(), String>
-///
-/// # Examples
-///
-/// ```
-///
-/// ```
 pub fn find_functions(pdb_path: &str, file_type: &str, mut dump_file: File) -> Result<(), String> {
     let file = File::open("./dumpFilter.txt").unwrap();
     let functions = BufReader::new(file);

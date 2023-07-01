@@ -10,3 +10,8 @@ const char* demangle(const char* symbol)
     UnDecorateSymbolName(symbol, buffer, 1024, 0);
     return buffer;
 }
+
+void free_demangled_name(char* name)
+{
+    free(name);
+}

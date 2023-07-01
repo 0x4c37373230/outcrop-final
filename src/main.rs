@@ -1,5 +1,6 @@
 #![windows_subsystem = "windows"]
 
+extern crate alloc;
 extern crate native_windows_derive as nwd;
 extern crate native_windows_gui as nwg;
 
@@ -117,7 +118,7 @@ impl Outcrop {
             Ok(dump_file) => pdb::pdb_dump(pdb_path, file_type, dump_file, demangle)
                 .expect("ERROR: Failed to dump pdb contents"),
             Err(msg) => {
-                nwg::simple_message("Error", &msg);
+                msg_builder(false, &msg);
                 return;
             }
         }
@@ -132,7 +133,7 @@ impl Outcrop {
                     bds_func.name, bds_func.symbol, bds_func.rva
                 ),
             ),
-            Err(str) => nwg::simple_message("Error", &str),
+            Err(msg) => msg_builder(false, &msg),
         };
     }
 
@@ -142,14 +143,10 @@ impl Outcrop {
 
         match setup::dump_init(pdb_path, file_type) {
             Ok(dump_file) => match pdb::find_functions(pdb_path, file_type, dump_file) {
-                Err(msg) => {
-                    nwg::simple_message("Error", &msg);
-                }
+                Err(msg) => msg_builder(false, &msg),
                 _ => {}
             },
-            Err(msg) => {
-                nwg::simple_message("Error", &msg);
-            }
+            Err(msg) => msg_builder(false, &msg),
         }
     }
 
