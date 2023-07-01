@@ -133,7 +133,7 @@ impl Outcrop {
                     bds_func.name, bds_func.symbol, bds_func.rva
                 ),
             ),
-            Err(msg) => msg_builder(false, &msg),
+            Err(msg) => nwg::error_message("ERROR", &msg),
         };
     }
 
